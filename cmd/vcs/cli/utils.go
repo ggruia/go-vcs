@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
 	"io"
 	"os"
 	"os/exec"
@@ -80,4 +82,14 @@ func runShellCommand(command string) (stderrMsg, stdoutMsg string, cmdResult err
 	err := cmd.Run()
 
 	return stderr.String(), stdout.String(), err
+}
+
+func hashFileContents(contents []byte) string {
+	hasher := sha1.New()
+	hasher.Write(contents)
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func checkFileHash(contents []byte, hash string) bool {
+	return hash == hashFileContents(contents)
 }
