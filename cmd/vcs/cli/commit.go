@@ -1,25 +1,82 @@
 package cli
 
 import (
-	"flag"
+	"errors"
 	"fmt"
-	"go-vcs/cmd/vcs/internal"
-	"log"
+	"github.com/spf13/cobra"
+	"io"
 	"os"
+	"path/filepath"
+	"time"
 )
 
-func HandleCommit(commitCmd *flag.FlagSet, commitMessage *string) {
-	err := commitCmd.Parse(os.Args[2:])
+const (
+	messageFlag = "message"
+)
+
+func init() {
+	commitCmd.Flags().StringP(messageFlag, "m", "", "commit message")
+	_ = commitCmd.MarkFlagRequired(messageFlag)
+	rootCmd.AddCommand(commitCmd)
+}
+
+var commitCmd = &cobra.Command{
+	Use:     "commit",
+	Short:   "This allows you save all all file changes",
+	Example: `vcs commit -m "your message"`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		msg, _ := cmd.Flags().GetString(messageFlag)
+		if msg == "" {
+			return errors.New("commit message cannot be empty")
+		}
+		return runCommitCommand(stagingAreaFilePath, msg)
+	},
+}
+
+func runCommitCommand(trackedFilePath, msg string) error {
+	dirCount, err := getNumberOfChildrenDir(vcsCommitDirPath)
 	if err != nil {
-		return
+		return err
 	}
 
-	if *commitMessage == "" {
-		log.Fatal("commit message is required")
-	}
-	err = internal.CreateCommit(*commitMessage)
+	newCommitDirName := filepath.Join(vcsCommitDirPath, fmt.Sprintf("v%d", dirCount+1))
+	err = createCommitMetadataFile(newCommitDirName, msg, time.Now())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	fmt.Println("Changes committed.")
+
+	fileNameToMetadata, err := createFileNameToMetadataMap(trackedFilePath)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range fileNameToMetadata {
+		destCommitFilePath := filepath.Join(newCommitDirName, file.Path)
+
+		destinationFilePtr, _ := createNestedFile(destCommitFilePath)
+		originalFilePtr, _ := os.Open(file.Path)
+		_, _ = io.Copy(destinationFilePtr, originalFilePtr)
+
+		originalFilePtr.Close()
+		destinationFilePtr.Close()
+	}
+
+	stagingFilePtr, _ := openFile(stagingAreaFilePath)
+	defer stagingFilePtr.Close()
+
+	err = clearFileContent(stagingFilePtr)
+
+	return err
+}
+
+func createCommitMetadataFile(commitDirName, commitMsg string, commitDate time.Time) error {
+	msgFilePtr, err := createNestedFile(filepath.Join(commitDirName, vcsCommitMetadataFileName))
+	if err != nil {
+		return err
+	}
+	defer msgFilePtr.Close()
+
+	_, _ = msgFilePtr.WriteString(toFormatCommitMetadata(commitMsg, commitDate))
+
+	return nil
 }
