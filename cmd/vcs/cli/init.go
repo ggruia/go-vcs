@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
+	"go-vcs/cmd/vcs/utils"
 	"path/filepath"
 )
 
 const (
 	vcsRootDir     = ".vcs"
-	vcsCommitsDir  = "objects"
+	vcsObjectsDir  = "objects"
 	vcsBranchesDir = "branches"
 	vcsRefsDir     = "refs"
 	vcsIndexPath   = "index"
@@ -18,7 +19,7 @@ const (
 )
 
 var (
-	commitsDirPath  = filepath.Join(vcsRootDir, vcsCommitsDir)
+	objectsDirPath  = filepath.Join(vcsRootDir, vcsObjectsDir)
 	branchesDirPath = filepath.Join(vcsRootDir, vcsBranchesDir)
 	refsDirPath     = filepath.Join(vcsRootDir, vcsRefsDir)
 	indexPath       = filepath.Join(vcsRootDir, vcsIndexPath)
@@ -39,21 +40,21 @@ var initCmd = &cobra.Command{
 }
 
 func runInitCommand() error {
-	if exists, err := checkPathExists(vcsRootDir); err != nil {
+	if exists, err := utils.CheckPathExists(vcsRootDir); err != nil {
 		return err
 	} else if exists {
-		return errors.New("vcs root directory is already exist")
+		return errors.New("vcs root directory already exists")
 	}
 
-	if err := createDirectories(vcsRootDir, commitsDirPath, branchesDirPath, refsDirPath); err != nil {
+	if err := utils.CreateDirectories(vcsRootDir, objectsDirPath, branchesDirPath, refsDirPath); err != nil {
 		return err
 	}
 
-	if err := createFile(indexPath); err != nil {
+	if err := utils.CreateFile(indexPath); err != nil {
 		return err
 	}
 
-	if err := createFile(headPath); err != nil {
+	if err := utils.CreateFile(headPath); err != nil {
 		return err
 	}
 
