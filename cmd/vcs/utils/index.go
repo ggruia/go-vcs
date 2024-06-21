@@ -4,23 +4,22 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
 type FileStat struct {
-	Path  string
-	Hash  string
+	Name  string
 	Size  int64
+	Data  []byte
 	Mtime time.Time
 }
 
-type FileHashMap map[string]FileStat
+type StatMap map[string]FileStat
 
-var ExcludedPrefixes = []string{".git", ".vcs", "vcs"}
+var excludedPrefixes = []string{".git", ".vcs", "vcs"}
 
-func ReadFilesFromWorkingDir(rootDir string) (FileHashMap, error) {
-	fileMap := FileHashMap{}
+func ReadFilesFromWorkingDir(rootDir string) (StatMap, error) {
+	fileMap := StatMap{}
 
 	err := filepath.WalkDir(rootDir, func(path string, fsEntry fs.DirEntry, err error) error {
 		if err != nil {
@@ -36,10 +35,8 @@ func ReadFilesFromWorkingDir(rootDir string) (FileHashMap, error) {
 			return err
 		}
 
-		for _, prefix := range ExcludedPrefixes {
-			if strings.HasPrefix(relPath, prefix) {
-				return nil
-			}
+		if StartsWithAny(relPath, excludedPrefixes) {
+			return nil
 		}
 
 		data, err := os.ReadFile(relPath)
@@ -47,16 +44,16 @@ func ReadFilesFromWorkingDir(rootDir string) (FileHashMap, error) {
 			return err
 		}
 
-		fileInfo, err := os.Stat(relPath)
+		stat, err := os.Stat(relPath)
 		if err != nil {
 			return err
 		}
 
 		fileMap[relPath] = FileStat{
-			Path:  relPath,
-			Hash:  HashBytes(data),
-			Size:  fileInfo.Size(),
-			Mtime: fileInfo.ModTime(),
+			Name:  stat.Name(),
+			Size:  stat.Size(),
+			Data:  data,
+			Mtime: stat.ModTime(),
 		}
 
 		return nil

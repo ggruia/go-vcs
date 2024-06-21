@@ -2,16 +2,17 @@ package utils
 
 import (
 	"bufio"
-	"os"
+	"go-vcs/cmd/vcs/object"
 	"strings"
 )
 
 const (
 	separator  = " | "
 	timeFormat = "2006-01-02 03:04:05"
+	empty      = "-"
 )
 
-type FileMetadata struct {
+type Metadata struct {
 	Mtime string
 	Path  string
 	Work  string
@@ -19,49 +20,44 @@ type FileMetadata struct {
 	Repo  string
 }
 
-type FileMetadataMap map[string]FileMetadata
+type MetadataMap map[string]Metadata
 
-func parseMetadata(line string) FileMetadata {
-	row := strings.Split(line, separator)
-	return FileMetadata{
-		Mtime: row[0],
-		Path:  row[1],
-		Work:  row[2],
-		Stage: row[3],
-		Repo:  row[4],
-	}
+type MetadataIO interface {
+	Read() (MetadataMap, error)
+	Write(metadataMap *MetadataMap) error
+	UpdateFromWorkDir() error
 }
 
-func ReadMetadata(file string) (FileMetadataMap, error) {
-	f, err := OpenFile(file)
+type MetadataManager struct {
+	Path string
+}
+
+func (manager *MetadataManager) Read() (MetadataMap, error) {
+	f, err := OpenFile(manager.Path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	filesMetadata := FileMetadataMap{}
+	metadataMap := MetadataMap{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		metadata := parseMetadata(scanner.Text())
-		filesMetadata[metadata.Path] = metadata
+		metadataMap[metadata.Path] = metadata
 	}
 
-	return filesMetadata, nil
+	return metadataMap, nil
 }
 
-func (f *FileMetadata) formatMetadata() string {
-	return strings.Join([]string{f.Mtime, f.Path, f.Work, f.Stage, f.Repo}, separator)
-}
-
-func WriteMetadata(file string, metadata FileMetadataMap) error {
-	f, err := OpenFile(file)
+func (manager *MetadataManager) Write(metadataMap *MetadataMap) error {
+	f, err := OpenFile(manager.Path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	writer := bufio.NewWriter(f)
-	for _, m := range metadata {
+	for _, m := range *metadataMap {
 		line := m.formatMetadata()
 		writer.WriteString(line + "\n")
 	}
@@ -70,23 +66,48 @@ func WriteMetadata(file string, metadata FileMetadataMap) error {
 	return nil
 }
 
-func UpdateMetadata(fileHashMap FileHashMap) FileMetadataMap {
-	metadata := FileMetadataMap{}
+func (manager *MetadataManager) UpdateFromWorkDir() error {
+	metadataMap, err := manager.Read()
+	if err != nil {
+		return err
+	}
 
-	for p, f := range fileHashMap {
-		file, err := os.ReadFile(f.Path)
-		if err != nil {
-			return nil
-		}
+	statMap, err := ReadFilesFromWorkingDir(".")
+	if err != nil {
+		return err
+	}
 
-		metadata[p] = FileMetadata{
-			Mtime: f.Mtime.Format(timeFormat),
-			Path:  f.Path,
-			Work:  HashBytes(file),
-			Stage: "-",
-			Repo:  "-",
+	for path, stat := range statMap {
+		mTime := stat.Mtime.Format(timeFormat)
+		if metadata, ok := metadataMap[path]; ok {
+			blob := object.NewBlob(stat.Data)
+			metadata.Work = blob.ID
+			metadata.Mtime = mTime
+		} else {
+			metadataMap[path] = Metadata{
+				Mtime: mTime,
+				Path:  path,
+				Work:  HashBytes(stat.Data),
+				Stage: empty,
+				Repo:  empty,
+			}
 		}
 	}
 
-	return metadata
+	return nil
+}
+
+func parseMetadata(line string) Metadata {
+	row := strings.Split(line, separator)
+	return Metadata{
+		Mtime: row[0],
+		Path:  row[1],
+		Work:  row[2],
+		Stage: row[3],
+		Repo:  row[4],
+	}
+}
+
+func (f *Metadata) formatMetadata() string {
+	return strings.Join([]string{f.Mtime, f.Path, f.Work, f.Stage, f.Repo}, separator)
 }

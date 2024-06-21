@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	noChangesMessage = "No changes in working directory.\n"
-	notStagedMessage = "Changes not staged for commit:\n"
-	stagedMessage    = "Changes to be committed:\n"
+	noChangesMessage = "No changes in working directory."
+	notStagedMessage = "Changes not staged for commit:"
+	stagedMessage    = "Changes to be committed:"
 )
 
 func init() {
@@ -30,12 +30,12 @@ var statusCmd = &cobra.Command{
 }
 
 func runStatusCommand(writer io.Writer, stagingPath string) error {
-	files, err := utils.ReadFilesFromWorkingDir(".")
+	statsMap, err := utils.ReadFilesFromWorkingDir(".")
 	if err != nil {
 		return err
 	}
 
-	metadata := utils.UpdateMetadata(files)
+	metadata := utils.UpdateMetadata(statsMap)
 	if err = utils.WriteMetadata(stagingPath, metadata); err != nil {
 		return err
 	}
@@ -76,7 +76,6 @@ func displayStatus(writer io.Writer, filesInfo utils.FileInfoArr) {
 	if stagedTable.NumLines() > 0 {
 		fmt.Println(stagedMessage)
 		stagedTable.Render()
-		fmt.Println("\n")
 	}
 
 	if notStagedTable.NumLines() > 0 {
@@ -105,8 +104,7 @@ func createTable(writer io.Writer) *tablewriter.Table {
 	table.SetBorder(false)
 	table.SetColumnSeparator("")
 	table.SetRowSeparator("")
-	table.SetTablePadding("   ")
-	table.SetNoWhiteSpace(true)
+	table.SetTablePadding("\t")
 
 	return table
 }

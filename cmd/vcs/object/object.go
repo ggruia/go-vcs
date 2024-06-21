@@ -6,24 +6,26 @@ import (
 
 type Type string
 
-const (
-	BlobObject   Type   = "blob"
-	TreeObject   Type   = "tree"
-	CommitObject Type   = "commit"
-	PathPrefix   string = ".vcs/objects/"
-)
-
-type Object struct {
-	Type    Type
-	Size    int
-	Content []byte
+type Object interface {
+	GetID() string
+	GetType() Type
+	GetData() []byte
+	GetSize() int
+	ToBytes() ([]byte, error)
 }
+
+const (
+	blobObject   Type   = "blob"
+	treeObject   Type   = "tree"
+	commitObject Type   = "commit"
+	pathPrefix   string = ".vcs/objects/"
+)
 
 func composeHeader(t Type, l int) []byte {
 	return []byte(fmt.Sprintf("%s %d\n", t, l))
 }
 
-func createContent(o *Object) []byte {
-	header := composeHeader(o.Type, o.Size)
-	return append(header, o.Content...)
+func CreateContent(data []byte, t Type) []byte {
+	header := composeHeader(t, len(data))
+	return append(header, data...)
 }
