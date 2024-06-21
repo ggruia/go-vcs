@@ -2,6 +2,8 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
+	"go-vcs/cmd/vcs/object"
+	"go-vcs/cmd/vcs/utils"
 )
 
 func init() {
@@ -18,42 +20,12 @@ var addCmd = &cobra.Command{
 }
 
 func runAddCommand(stagingPath string, filePaths []string) error {
-	//metadataMap, err := filedata.ReadMetadataMap(stagingPath)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//determineStagingAreaFiles(filePaths, metadataMap)
-	//
-	//statusFilePtr, _ := openFile(statusFilePath)
-	//defer statusFilePtr.Close()
-	//
-	//stagingFilePtr, _ := openFileAppendMode(stagingAreaFilePath)
-	//defer stagingFilePtr.Close()
-	//
-	//// we need to truncate status folder in order to catch overwrite file status
-	//if err := clearFileContent(statusFilePtr); err != nil {
-	//	return err
-	//}
-	//
-	//for _, metadata := range fileNameToMetadata {
-	//	lineStr := metadata.toFormatFileMetadataForFile()
-	//
-	//	_, _ = statusFilePtr.WriteString(lineStr)
-	//	if metadata.GoToStaging {
-	//		_, _ = stagingFilePtr.WriteString(lineStr)
-	//	}
-	//}
+	manager := object.MetadataManager{Path: stagingPath}
 
-	//files, err := utils.ReadFilesFromWorkingDir(".")
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//metadata := utils.UpdateMetadata(files)
-	//if err = utils.WriteMetadata(stagingPath, metadata); err != nil {
-	//	return err
-	//}
+	for _, path := range filePaths {
+		files := utils.AllFilesInDir(path)
+		manager.AddToStaging(files)
+	}
 
 	return nil
 }

@@ -72,6 +72,7 @@ func displayStatus(writer io.Writer, filesInfo object.FileInfoArr) {
 	if stagedTable.NumLines() > 0 {
 		fmt.Println(stagedMessage)
 		stagedTable.Render()
+		fmt.Println()
 	}
 
 	if notStagedTable.NumLines() > 0 {
