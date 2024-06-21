@@ -2,7 +2,6 @@ package cli
 
 import (
 	"github.com/spf13/cobra"
-	"go-vcs/cmd/vcs/utils"
 )
 
 func init() {
@@ -46,15 +45,15 @@ func runAddCommand(stagingPath string, filePaths []string) error {
 	//	}
 	//}
 
-	files, err := utils.ReadFilesFromWorkingDir(".")
-	if err != nil {
-		return err
-	}
-
-	metadata := utils.UpdateMetadata(files)
-	if err = utils.WriteMetadata(stagingPath, metadata); err != nil {
-		return err
-	}
+	//files, err := utils.ReadFilesFromWorkingDir(".")
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//metadata := utils.UpdateMetadata(files)
+	//if err = utils.WriteMetadata(stagingPath, metadata); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

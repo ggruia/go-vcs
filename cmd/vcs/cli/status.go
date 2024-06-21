@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"go-vcs/cmd/vcs/utils"
+	"go-vcs/cmd/vcs/object"
 	"io"
 	"os"
 	"sort"
@@ -30,13 +30,9 @@ var statusCmd = &cobra.Command{
 }
 
 func runStatusCommand(writer io.Writer, stagingPath string) error {
-	statsMap, err := utils.ReadFilesFromWorkingDir(".")
+	manager := object.MetadataManager{Path: stagingPath}
+	err := manager.UpdateFromWorkDir()
 	if err != nil {
-		return err
-	}
-
-	metadata := utils.UpdateMetadata(statsMap)
-	if err = utils.WriteMetadata(stagingPath, metadata); err != nil {
 		return err
 	}
 
@@ -50,7 +46,7 @@ func runStatusCommand(writer io.Writer, stagingPath string) error {
 }
 
 // Display Format: | modifiedAt | filepath | status |
-func displayStatus(writer io.Writer, filesInfo utils.FileInfoArr) {
+func displayStatus(writer io.Writer, filesInfo object.FileInfoArr) {
 	if len(filesInfo) == 0 {
 		fmt.Println(noChangesMessage)
 		return
@@ -62,7 +58,7 @@ func displayStatus(writer io.Writer, filesInfo utils.FileInfoArr) {
 	for _, f := range filesInfo {
 		row := []string{string(f.Status), f.Path}
 		statusColor := tablewriter.FgGreenColor
-		if f.Status == utils.StatusModified {
+		if f.Status == object.StatusModified {
 			statusColor = tablewriter.FgBlueColor
 		}
 		if f.Staging {
@@ -84,15 +80,16 @@ func displayStatus(writer io.Writer, filesInfo utils.FileInfoArr) {
 	}
 }
 
-func getStagingInfo(stagingFile string) (utils.FileInfoArr, error) {
-	metadata, err := utils.ReadMetadata(stagingFile)
+func getStagingInfo(stagingFile string) (object.FileInfoArr, error) {
+	manager := object.MetadataManager{Path: stagingFile}
+	metadata, err := manager.Read()
 	if err != nil {
 		return nil, err
 	}
 
-	var filesInfo utils.FileInfoArr
+	var filesInfo object.FileInfoArr
 	for _, m := range metadata {
-		filesInfo = append(filesInfo, utils.FromFileMetadataToFileInfo(m))
+		filesInfo = append(filesInfo, object.FromFileMetadataToFileInfo(m))
 	}
 
 	sort.Sort(filesInfo)
@@ -105,6 +102,7 @@ func createTable(writer io.Writer) *tablewriter.Table {
 	table.SetColumnSeparator("")
 	table.SetRowSeparator("")
 	table.SetTablePadding("\t")
+	table.SetNoWhiteSpace(true)
 
 	return table
 }

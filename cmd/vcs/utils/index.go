@@ -16,7 +16,7 @@ type FileStat struct {
 
 type StatMap map[string]FileStat
 
-var excludedPrefixes = []string{".git", ".vcs", "vcs"}
+var excludedPrefixes = []string{".git", ".vcs", "vcs", ".idea"}
 
 func ReadFilesFromWorkingDir(rootDir string) (StatMap, error) {
 	fileMap := StatMap{}
